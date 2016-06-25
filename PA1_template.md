@@ -16,7 +16,7 @@ The dataset is stored in a comma-separated-value (CSV) file and there are a tota
 
 ## 1 - Loading and preprocessing the data
 
-* Loading the Data
+* Defining libraries
 
 
 ```r
@@ -24,14 +24,85 @@ getwd()
 ```
 
 ```
-## [1] "C:/Users/joseantonio/Desktop/Coursera/GITHUB/RepData_PeerAssessment1"
+## [1] "/Volumes/Dados/Coursera/GITHUB/RepData_PeerAssessment1"
 ```
 
 ```r
 library(knitr)
 library(markdown)
 library(rmarkdown)
+library(plyr)
+library(dplyr)
 ```
+
+```
+## 
+## Attaching package: 'dplyr'
+```
+
+```
+## The following objects are masked from 'package:plyr':
+## 
+##     arrange, count, desc, failwith, id, mutate, rename, summarise,
+##     summarize
+```
+
+```
+## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+```
+
+```
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+```
+
+```r
+library(Hmisc)
+```
+
+```
+## Loading required package: lattice
+```
+
+```
+## Loading required package: survival
+```
+
+```
+## Loading required package: Formula
+```
+
+```
+## Loading required package: ggplot2
+```
+
+```
+## 
+## Attaching package: 'Hmisc'
+```
+
+```
+## The following objects are masked from 'package:dplyr':
+## 
+##     combine, src, summarize
+```
+
+```
+## The following objects are masked from 'package:plyr':
+## 
+##     is.discrete, summarize
+```
+
+```
+## The following objects are masked from 'package:base':
+## 
+##     format.pval, round.POSIXt, trunc.POSIXt, units
+```
+
+* Loading the data
 
 
 ```r
@@ -40,6 +111,7 @@ download.file("http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zi
 dataset <- unz(dataset, "activity.csv")
 activity <- read.csv(file = "activity.csv", header = TRUE, sep = ",")
 unlink(dataset)
+rm(dataset)
 ```
 
 
@@ -62,35 +134,6 @@ str(activity)
 ##  $ date    : Factor w/ 61 levels "2012-10-01","2012-10-02",..: 1 1 1 1 1 1 1 1 1 1 ...
 ##  $ interval: int  0 5 10 15 20 25 30 35 40 45 ...
 ```
-
-
-* Transforming the data for suitable analysis
-
-
-```r
-activity$date <- as.Date(activity$date)
-str(activity)
-```
-
-```
-## 'data.frame':	17568 obs. of  3 variables:
-##  $ steps   : int  NA NA NA NA NA NA NA NA NA NA ...
-##  $ date    : Date, format: "2012-10-01" "2012-10-01" ...
-##  $ interval: int  0 5 10 15 20 25 30 35 40 45 ...
-```
-
-```r
-activity <- activity[which(activity$steps!= "NA"), ]
-str(activity)
-```
-
-```
-## 'data.frame':	15264 obs. of  3 variables:
-##  $ steps   : int  0 0 0 0 0 0 0 0 0 0 ...
-##  $ date    : Date, format: "2012-10-02" "2012-10-02" ...
-##  $ interval: int  0 5 10 15 20 25 30 35 40 45 ...
-```
-
 
 
 ## 2 - What is mean total number of steps taken per day?
@@ -167,15 +210,25 @@ sumSteps
 hist(sumSteps$steps, col = 'blue',  xlab = 'Total Steps per Day', main = "Histogram of Activities")
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
+![](PA1_template_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
+
+```r
+## saving the plot
+dev.copy(png,'hist-total-steps.png',  width = 480, height = 480)
+```
+
+```
+## quartz_off_screen 
+##                 3
+```
 
 ```r
 dev.off()
 ```
 
 ```
-## null device 
-##           1
+## quartz_off_screen 
+##                 2
 ```
 
 * Calculate the mean and median of the total number of steps taken per day 
@@ -263,7 +316,6 @@ totalMedianSteps
 ```
 ## [1] 10765
 ```
-
 
 
 ## 3 - What is the average daily activity pattern?
@@ -568,6 +620,9 @@ averageSteps
 ## 288     2355   1.0754717
 ```
 
+* Time series plot of the average number of steps taken
+
+
 ```r
 plot(x = averageSteps$interval, y = averageSteps$steps, type = "l", lwd=2, xlab = "Intervals",
      ylab = "Average number of steps", main = "Average Daily activity Pattern")
@@ -576,12 +631,22 @@ plot(x = averageSteps$interval, y = averageSteps$steps, type = "l", lwd=2, xlab 
 ![](PA1_template_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
 
 ```r
+## saving the plot
+dev.copy(png,'average-number-steps.png',  width = 480, height = 480)
+```
+
+```
+## quartz_off_screen 
+##                 3
+```
+
+```r
 dev.off()
 ```
 
 ```
-## null device 
-##           1
+## quartz_off_screen 
+##                 2
 ```
 
 
@@ -606,14 +671,226 @@ averageSteps[which.max(averageSteps$steps),]$interval
 ```
 
 
+## 4 - Strategy of Imputing Missing Values
 
-## 4 - Imputing missing values
-
-* 
+* Total number of missing values (total rows with NAs) 
 
 
+```r
+missingValues <- is.na(activity$steps)
+table(missingValues)
+```
+
+```
+## missingValues
+## FALSE  TRUE 
+## 15264  2304
+```
+
+* Creating a New Dataset (wrangling it). Filling the missing data with average.
+
+
+```r
+newDataset <- activity
+newDataset$steps <- with(newDataset,impute(steps,mean))
+newDataset$date <- as.Date(newDataset$date)
+str(newDataset)
+```
+
+```
+## 'data.frame':	17568 obs. of  3 variables:
+##  $ steps   :Class 'impute'  atomic [1:17568] 37.4 37.4 37.4 37.4 37.4 ...
+##   .. ..- attr(*, "imputed")= int [1:2304] 1 2 3 4 5 6 7 8 9 10 ...
+##  $ date    : Date, format: "2012-10-01" "2012-10-01" ...
+##  $ interval: int  0 5 10 15 20 25 30 35 40 45 ...
+```
+
+```r
+sumNewdataset <- aggregate(steps ~ date, data = newDataset, FUN = "sum", na.rm = TRUE)
+sumNewdataset
+```
+
+```
+##          date    steps
+## 1  2012-10-01 10766.19
+## 2  2012-10-02   126.00
+## 3  2012-10-03 11352.00
+## 4  2012-10-04 12116.00
+## 5  2012-10-05 13294.00
+## 6  2012-10-06 15420.00
+## 7  2012-10-07 11015.00
+## 8  2012-10-08 10766.19
+## 9  2012-10-09 12811.00
+## 10 2012-10-10  9900.00
+## 11 2012-10-11 10304.00
+## 12 2012-10-12 17382.00
+## 13 2012-10-13 12426.00
+## 14 2012-10-14 15098.00
+## 15 2012-10-15 10139.00
+## 16 2012-10-16 15084.00
+## 17 2012-10-17 13452.00
+## 18 2012-10-18 10056.00
+## 19 2012-10-19 11829.00
+## 20 2012-10-20 10395.00
+## 21 2012-10-21  8821.00
+## 22 2012-10-22 13460.00
+## 23 2012-10-23  8918.00
+## 24 2012-10-24  8355.00
+## 25 2012-10-25  2492.00
+## 26 2012-10-26  6778.00
+## 27 2012-10-27 10119.00
+## 28 2012-10-28 11458.00
+## 29 2012-10-29  5018.00
+## 30 2012-10-30  9819.00
+## 31 2012-10-31 15414.00
+## 32 2012-11-01 10766.19
+## 33 2012-11-02 10600.00
+## 34 2012-11-03 10571.00
+## 35 2012-11-04 10766.19
+## 36 2012-11-05 10439.00
+## 37 2012-11-06  8334.00
+## 38 2012-11-07 12883.00
+## 39 2012-11-08  3219.00
+## 40 2012-11-09 10766.19
+## 41 2012-11-10 10766.19
+## 42 2012-11-11 12608.00
+## 43 2012-11-12 10765.00
+## 44 2012-11-13  7336.00
+## 45 2012-11-14 10766.19
+## 46 2012-11-15    41.00
+## 47 2012-11-16  5441.00
+## 48 2012-11-17 14339.00
+## 49 2012-11-18 15110.00
+## 50 2012-11-19  8841.00
+## 51 2012-11-20  4472.00
+## 52 2012-11-21 12787.00
+## 53 2012-11-22 20427.00
+## 54 2012-11-23 21194.00
+## 55 2012-11-24 14478.00
+## 56 2012-11-25 11834.00
+## 57 2012-11-26 11162.00
+## 58 2012-11-27 13646.00
+## 59 2012-11-28 10183.00
+## 60 2012-11-29  7047.00
+## 61 2012-11-30 10766.19
+```
+
+* Histogram of the total number of steps taken each day after missing values are imputed.
+
+
+```r
+hist(sumNewdataset$steps, main="Steps Per Day By Frequency",xlab="Daily Steps")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
+
+```r
+## saving the plot
+dev.copy(png,'steps-each-day.png',  width = 480, height = 480)
+```
+
+```
+## quartz_off_screen 
+##                 3
+```
+
+```r
+dev.off()
+```
+
+```
+## quartz_off_screen 
+##                 2
+```
+
+* Mean and Median of newDataset
+
+
+```r
+mean(sumNewdataset$steps, na.rm = TRUE)
+```
+
+```
+## [1] 10766.19
+```
+
+```r
+median(sumNewdataset$steps, na.rm = TRUE)
+```
+
+```
+## [1] 10766.19
+```
 
 
 ## 5 - Are there differences in activity patterns between weekdays and weekends?
+* Use function Weekdays()
+
+
+```r
+dataWeek <- transform(newDataset, day = weekdays(date))
+```
+
+
+* Create a new factor variable in the dataset with two levels ??? ???weekday??? and ???weekend??? indicating whether a given date is a weekday or weekend day.
+
+
+```r
+weekdays <- c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
+weekdays
+```
+
+```
+## [1] "Monday"    "Tuesday"   "Wednesday" "Thursday"  "Friday"
+```
+
+```r
+dataWeek$weekClass <- factor(dataWeek$day %in% weekdays, 
+                          levels=c(FALSE, TRUE), labels = c("weekend", "weekday"))
+```
+
+* Subsetting the Data in Weekdays and Weekend
+
+```r
+weekends <- dataWeek[dataWeek$weekClass=="weekend",]
+weekendSum <- aggregate(steps ~ interval, data=weekends, FUN="sum")
+
+weekdays <- dataWeek[dataWeek$weekClass=="weekday",]
+weekdaySum <- aggregate(steps ~ interval, data=weekdays, FUN="sum")
+```
+
+* Make a panel plot containing a time series plot (i.e. ???????????????? = "????") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+
+
+```r
+par(mfrow=c(2,1))
+plot(weekdaySum$interval, weekdaySum$steps, ylab = "Weekday Steps", xlab = "Weekdays Interval ", type="l", main="Weekday Activity")
+
+plot(weekendSum$interval, weekendSum$steps, ylab = "Weekend Steps", xlab = "Weekends Interval", type="l", main="Weekend Activity")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
+
+```r
+## saving the plot
+dev.copy(png,'data-weekdays-weekend.png',  width = 480, height = 480)
+```
+
+```
+## quartz_off_screen 
+##                 3
+```
+
+```r
+dev.off()
+```
+
+```
+## quartz_off_screen 
+##                 2
+```
+
+* ANSWER QUESTION 5: During the weekdays there is a spike of activity in the morning. On the weekends, the activity pattern is dynamic throughout the day.
+
 
 
